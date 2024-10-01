@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <div class="result"></div>
+
+    <button class="btn1">Call Server</button>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+        const resultDiv=document.querySelector(".result")
+
+        const callRefresh=async ()=>{
+            const accessToken=localStorage.getItem("accessToken")
+            const refreshToken=localStorage.getItem("refreshToken")
+
+            const tokens={accessToken,refreshToken}
+            console.log(tokens)
+            const res=await axios.post("http://localhost:8080/refreshToken",tokens)
+            localStorage.setItem("accessToken",res.data.accessToken)
+            localStorage.setItem("refreshToken",res.data.refreshToken)
+        }
+        const callServer=async()=>{
+            const accessToken=localStorage.getItem("accessToken")
+
+            if(!accessToken){
+                throw 'Cannot Find AccessToken'
+            }
+
+            const authHeader={"Authorization":`Bearer ${accessToken}`}
+            try {
+                const res = await axios.get("http://localhost:8080/api/doA", {headers: authHeader})
+
+                return res;
+            }catch (error){
+                if(error.response.data.msg==='Expired Token'){
+                    console.log("Refresh your Token")
+
+                    try{
+                        await callRefresh()
+                        console.log("new tokens...")
+                        return callServer()
+                    }catch(refreshError){
+                        throw refreshError.response.date.msg
+                    }
+
+                }
+            }
+        }
+
+        document.querySelector(".btn1").addEventListener(
+            "click",
+            ()=>{
+                callServer()
+                    .then(result=>{
+                        console.log(result)
+                    })
+            },
+            false
+        )
+    </script>
+</body>
+</html>
